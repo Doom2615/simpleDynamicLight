@@ -1,0 +1,14 @@
+name: SimpleDynamicLight
+version: '1.0'
+main: com.github.K4RUNIO.simpleDynamicLight.SimpleDynamicLight
+api-version: '1.21'
+authors: [ Karunio ]
+description: Simple plugin that will add Dynamic Light to your server
+commands:
+  dynlight:
+    description: Toggle dynamic lighting on or off.
+    usage: /dynlight <on|off|reload>
+permissions:
+  simpledynamiclight.reload:
+    description: Allows reloading the SimpleDynamicLight plugin.
+    default: op

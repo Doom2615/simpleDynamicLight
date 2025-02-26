@@ -1,0 +1,11 @@
+# Light levels for specific items (you can add your own)
+# Numbers are indicators of light strength (1-15)
+light-sources:
+  TORCH: 15
+  LANTERN: 15
+  GLOWSTONE: 15
+  SOUL_TORCH: 10
+  SOUL_LANTERN: 10
+
+# Update interval in milliseconds (500ms by default)
+update-interval: 500
