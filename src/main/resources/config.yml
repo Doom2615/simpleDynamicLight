@@ -1,4 +1,4 @@
-# Light levels for specific items (you can add your own)
+# Items that will emit light (you can add your own)
 # Numbers are indicators of light strength (1-15)
 light-sources:
   TORCH: 15
