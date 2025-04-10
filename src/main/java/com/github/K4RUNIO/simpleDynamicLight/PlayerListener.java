@@ -155,9 +155,44 @@ private boolean isSafeToPlaceLight(Block block, Location playerLoc) {
     if (wouldBlockContainer(block, playerLoc)) {
         return false;
     }
+    // Special handling for large chests
+    for (int x = -1; x <= 1; x++) {
+        for (int z = -1; z <= 1; z++) {
+            Block adjacent = block.getRelative(x, 0, z);
+            if (isChestBlock(adjacent)) {
+                // Don't place light blocks near large chests
+                return false;
+            }
+        }
+    }
 
     return true;
 }
+
+// Chest fixes
+    private boolean isNearLargeChest(Location location) {
+    int radius = 3;
+    for (int x = -radius; x <= radius; x++) {
+        for (int z = -radius; z <= radius; z++) {
+            Block block = location.getBlock().getRelative(x, 0, z);
+            if (isChestBlock(block)) {
+                return true;
+            }
+        }
+    }
+    return false;
+    }
+    
+    private boolean isChestBlock(Block block) {
+    Material type = block.getType();
+    if (type != Material.CHEST && type != Material.TRAPPED_CHEST) {
+        return false;
+    }
+    
+    // Additional check for double chests
+    Chest chest = (Chest)block.getState();
+    return chest.getInventory() instanceof DoubleChestInventory;
+    }
 
 // Comprehensive container interaction protection
 private boolean wouldBlockContainer(Block lightBlock, Location playerLoc) {
@@ -205,6 +240,23 @@ private boolean wouldBlockContainer(Block lightBlock, Location playerLoc) {
 
 // Optimized light position finding
 private Location findSafeLightLocation(Location origin) {
+     // Try positions further away when near chests
+    if (isNearLargeChest(origin)) {
+        Location[] chestOffsets = {
+            origin.clone().add(2, 2, 0),
+            origin.clone().add(-2, 2, 0),
+            origin.clone().add(0, 2, 2),
+            origin.clone().add(0, 2, -2),
+            origin.clone().add(0, 3, 0)
+        };
+        
+        for (Location loc : chestOffsets) {
+            Block block = loc.getBlock();
+            if (isSafeToPlaceLight(block, origin)) {
+                return loc;
+            }
+        }
+    }
     // Try positions in order of preference
     Location[] offsets = {
         origin.clone().add(1, 2, 0),   // Right side (priority)
@@ -251,6 +303,17 @@ private Location findSafeLightLocation(Location origin) {
 
         playerLightLocations.put(playerId, lightLoc);
     });
+        if (isNearLargeChest(location)) {
+        // Force chest rendering update
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online.getWorld().equals(location.getWorld()) && 
+                    online.getLocation().distance(location) < 32) {
+                    online.updateInventory();
+                }
+            }
+        }, 2L);
+        }
     }
 
     private void removePlayerLight(Player player) {
