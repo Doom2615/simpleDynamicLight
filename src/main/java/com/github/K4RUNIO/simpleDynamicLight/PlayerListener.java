@@ -26,11 +26,11 @@ import java.util.Map;
 import java.util.UUID;
 
 //Chest fixes
-private ChestVisualFix chestVisualFix;
+/*private ChestVisualFix chestVisualFix;
 
 public void onEnable() {
     chestVisualFix = new ChestVisualFix(this);
-}
+}*/
 
 
 public class PlayerListener implements Listener {
