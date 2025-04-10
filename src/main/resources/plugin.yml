@@ -1,5 +1,5 @@
 name: SimpleDynamicLight
-version: '2.1'
+version: '3.0'
 main: com.github.K4RUNIO.simpleDynamicLight.SimpleDynamicLight
 api-version: '1.21'
 authors: [ Karunio, Doom2615 ]
