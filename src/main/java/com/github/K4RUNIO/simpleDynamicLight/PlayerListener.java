@@ -26,11 +26,11 @@ import java.util.Map;
 import java.util.UUID;
 
 //Chest fixes
-/*private ChestVisualFix chestVisualFix;
+private ChestVisualFix chestVisualFix;
 
 public void onEnable() {
     chestVisualFix = new ChestVisualFix(this);
-}*/
+}
 
 
 public class PlayerListener implements Listener {
@@ -38,11 +38,11 @@ public class PlayerListener implements Listener {
     private final Map<UUID, Location> playerLightLocations = new HashMap<>();
     private final Map<UUID, Location> itemLightLocations = new HashMap<>();
 //Chest fixes
-private ChestVisualFix chestVisualFix;
+/*private ChestVisualFix chestVisualFix;
 
     public void onEnable() {
         chestVisualFix = new ChestVisualFix(this);
-    }
+    }*/
 
     public PlayerListener(SimpleDynamicLight plugin) {
         this.plugin = plugin;
