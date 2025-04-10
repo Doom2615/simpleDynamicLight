@@ -131,6 +131,28 @@ public class PlayerListener implements Listener {
         return Math.max(getLightLevel(inv.getItemInMainHand()), getLightLevel(inv.getItemInOffHand()));
     }
 
+    private boolean isSafeToPlaceLight(Block block) {
+    Material type = block.getType();
+
+    // Block must be air-like
+    if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.VOID_AIR) {
+        return false;
+    }
+
+    // Check if the block below is an interactable like a chest
+    Block below = block.getRelative(0, -1, 0);
+    Material belowType = below.getType();
+
+    return !isBlockingChestLid(belowType);
+}
+
+private boolean isBlockingChestLid(Material material) {
+    return switch (material) {
+        case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL, SHULKER_BOX, FURNACE, BLAST_FURNACE, SMOKER -> true;
+        default -> false;
+    };
+}
+
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
         UUID playerId = player.getUniqueId();
         Location oldLocation = playerLightLocations.get(playerId);
@@ -144,7 +166,7 @@ public class PlayerListener implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             Location lightLoc = location.clone().add(0, 2, 0);
             Block block = lightLoc.getBlock();
-            if (block.getType() != Material.AIR && block.getType() != Material.CAVE_AIR) return;
+            if (!isSafeToPlaceLight(block)) return;
 
             block.setType(Material.LIGHT);
             if (block.getBlockData() instanceof Levelled lightData) {
@@ -175,7 +197,7 @@ public class PlayerListener implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> {
             Location lightLoc = item.getLocation().clone().add(0, 1, 0);
             Block block = lightLoc.getBlock();
-            if (block.getType() != Material.AIR && block.getType() != Material.CAVE_AIR) return;
+            if (!isSafeToPlaceLight(block)) return;
 
             block.setType(Material.LIGHT);
             if (block.getBlockData() instanceof Levelled lightData) {
