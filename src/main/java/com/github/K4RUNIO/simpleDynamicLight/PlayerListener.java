@@ -25,6 +25,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+//Chest fixes
+private ChestVisualFix chestVisualFix;
+
+public void onEnable() {
+    chestVisualFix = new ChestVisualFix(this);
+}
+
 
 public class PlayerListener implements Listener {
     private final SimpleDynamicLight plugin;
@@ -313,6 +320,7 @@ private Location findSafeLightLocation(Location origin) {
             }
         }, 2L);
         }
+        chestVisualFix.handleChestVisuals(location);
     }
 
     private void removePlayerLight(Player player) {
