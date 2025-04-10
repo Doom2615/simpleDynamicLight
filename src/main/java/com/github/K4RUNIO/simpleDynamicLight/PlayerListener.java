@@ -131,74 +131,101 @@ public class PlayerListener implements Listener {
         return Math.max(getLightLevel(inv.getItemInMainHand()), getLightLevel(inv.getItemInOffHand()));
     }
 
-    private boolean isSafeToPlaceLight(Block block, Location playerLoc) {
+    // Updated container detection method
+private boolean isContainerBlock(Material material) {
+    return switch (material) {
+        // All container types that can be opened/interacted with
+        case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL, SHULKER_BOX,
+             CRAFTING_TABLE, SMITHING_TABLE, FURNACE, BLAST_FURNACE, SMOKER,
+             ANVIL, CHIPPED_ANVIL, DAMAGED_ANVIL, GRINDSTONE,
+             CARTOGRAPHY_TABLE, FLETCHING_TABLE, STONECUTTER,
+             LOOM, COMPOSTER, BREWING_STAND -> true;
+        default -> false;
+    };
+}
+
+// Enhanced safety check with player context
+private boolean isSafeToPlaceLight(Block block, Location playerLoc) {
     // Only place in air blocks
     if (!block.getType().isAir()) {
         return false;
     }
 
-    // Check if this position would block a chest the player is interacting with
-    if (couldBlockChestInteraction(block, playerLoc)) {
+    // Check if this would block any nearby container
+    if (wouldBlockContainer(block, playerLoc)) {
         return false;
-    }
-
-    // Check blocks below in a 3x3 area
-    for (int x = -1; x <= 1; x++) {
-        for (int z = -1; z <= 1; z++) {
-            Block below = block.getRelative(x, -1, z);
-            if (isChestLike(below.getType())) {
-                return false;
-            }
-        }
     }
 
     return true;
 }
 
-private boolean couldBlockChestInteraction(Block lightBlock, Location playerLoc) {
-    // Check if player is looking at a chest nearby
+// Comprehensive container interaction protection
+private boolean wouldBlockContainer(Block lightBlock, Location playerLoc) {
+    // Check blocks below in 3x3 area
+    for (int x = -1; x <= 1; x++) {
+        for (int z = -1; z <= 1; z++) {
+            Block below = lightBlock.getRelative(x, -1, z);
+            if (isContainerBlock(below.getType())) {
+                return true;
+            }
+        }
+    }
+
+    // Check player's line of sight to containers
     Block targetBlock = playerLoc.getBlock().getRelative(
         playerLoc.getDirection().getBlockX(),
         playerLoc.getDirection().getBlockY(),
         playerLoc.getDirection().getBlockZ()
     );
 
-    if (isChestLike(targetBlock.getType())) {
-        // Don't place light if it would be between player and chest
-        return lightBlock.getLocation().distanceSquared(targetBlock.getLocation()) < 4;
+    if (isContainerBlock(targetBlock.getType())) {
+        // Don't place light between player and container
+        return lightBlock.getLocation().distanceSquared(targetBlock.getLocation()) < 9;
+    }
+
+    // Check for containers in interaction range
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -1; y <= 2; y++) {
+            for (int z = -2; z <= 2; z++) {
+                Block nearby = playerLoc.getBlock().getRelative(x, y, z);
+                if (isContainerBlock(nearby.getType())) {
+                    // Don't place light directly above containers
+                    if (lightBlock.getY() > nearby.getY() && 
+                        lightBlock.getX() == nearby.getX() && 
+                        lightBlock.getZ() == nearby.getZ()) {
+                        return true;
+                    }
+                }
+            }
+        }
     }
 
     return false;
 }
 
-private boolean isChestLike(Material material) {
-    return switch (material) {
-        case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL, SHULKER_BOX -> true;
-        default -> false;
-    };
-}
-
-    private Location findSafeLightLocation(Location origin) {
+// Optimized light position finding
+private Location findSafeLightLocation(Location origin) {
+    // Try positions in order of preference
     Location[] offsets = {
-        origin.clone().add(1, 2, 0),
-        origin.clone().add(-1, 2, 0),
-        origin.clone().add(0, 2, 1),
-        origin.clone().add(0, 2, -1),
-        origin.clone().add(0, 3, 0),
-        origin.clone().add(1, 1, 0),
-        origin.clone().add(-1, 1, 0),
-        origin.clone().add(0, 1, 1),
-        origin.clone().add(0, 1, -1)
+        origin.clone().add(1, 2, 0),   // Right side (priority)
+        origin.clone().add(-1, 2, 0),  // Left side
+        origin.clone().add(0, 2, 1),   // Front
+        origin.clone().add(0, 2, -1),  // Back
+        origin.clone().add(1, 1, 0),   // Lower right
+        origin.clone().add(-1, 1, 0),  // Lower left
+        origin.clone().add(0, 1, 1),   // Lower front
+        origin.clone().add(0, 1, -1),  // Lower back
+        origin.clone().add(0, 3, 0)    // Higher position (last resort)
     };
 
     for (Location loc : offsets) {
         Block block = loc.getBlock();
-        if (isSafeToPlaceLight(block, origin)) {  // Now passing both parameters
+        if (isSafeToPlaceLight(block, origin)) {
             return loc;
         }
     }
     return null;
-    }
+}
 
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
     UUID playerId = player.getUniqueId();
