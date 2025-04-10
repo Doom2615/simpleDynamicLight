@@ -14,6 +14,7 @@ import java.util.concurrent.*;
 
 public class PlayerListener implements Listener {
     private final SimpleDynamicLight plugin;
+    private final ChestVisualFix chestVisualFix;
     private final Map<UUID, Location> playerLights = new ConcurrentHashMap<>();
     private final Map<UUID, Location> itemLights = new ConcurrentHashMap<>();
     private final Set<UUID> pendingUpdates = ConcurrentHashMap.newKeySet();
@@ -21,6 +22,7 @@ public class PlayerListener implements Listener {
 
     public PlayerListener(SimpleDynamicLight plugin) {
         this.plugin = plugin;
+        this.chestVisualFix = plugin.getChestVisualFix();
         startUpdateTask();
     }
 
@@ -108,6 +110,7 @@ public class PlayerListener implements Listener {
         if (lightLoc != null) {
             LightUtils.placeLight(lightLoc, lightLevel);
             playerLights.put(playerId, lightLoc);
+            chestVisualFix.handleChestVisuals(lightLoc);
         }
     }
 
