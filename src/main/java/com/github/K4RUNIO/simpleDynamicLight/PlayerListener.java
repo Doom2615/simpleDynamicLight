@@ -133,18 +133,18 @@ public class PlayerListener implements Listener {
 
     private boolean isSafeToPlaceLight(Block block) {
     Material type = block.getType();
+    if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.VOID_AIR) return false;
 
-    // Block must be air-like
-    if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.VOID_AIR) {
-        return false;
-    }
-
-    // Check if the block below is an interactable like a chest
     Block below = block.getRelative(0, -1, 0);
     Material belowType = below.getType();
 
-    return !isBlockingChestLid(belowType);
-}
+    // Avoid placing above interactable blocks
+    return !switch (belowType) {
+        case CHEST, ENDER_CHEST, TRAPPED_CHEST, BARREL, SHULKER_BOX,
+             FURNACE, BLAST_FURNACE, SMOKER -> true;
+        default -> false;
+    };
+    }
 
 private boolean isBlockingChestLid(Material material) {
     return switch (material) {
@@ -153,29 +153,48 @@ private boolean isBlockingChestLid(Material material) {
     };
 }
 
-    private void updatePlayerLight(Player player, Location location, int lightLevel) {
-        UUID playerId = player.getUniqueId();
-        Location oldLocation = playerLightLocations.get(playerId);
+    private Location findSafeLightLocation(Location origin) {
+    // Try placing 2 blocks above (head-level)
+    Location[] offsets = {
+        origin.clone().add(0, 2, 0), // head
+        origin.clone().add(1, 2, 0),
+        origin.clone().add(-1, 2, 0),
+        origin.clone().add(0, 2, 1),
+        origin.clone().add(0, 2, -1),
+        origin.clone().add(0, 3, 0)
+    };
 
-        if (oldLocation != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                oldLocation.getBlock().setType(Material.AIR);
-            });
+    for (Location loc : offsets) {
+        Block block = loc.getBlock();
+        if (isSafeToPlaceLight(block)) return loc;
+    }
+    return null;
+    }
+
+    private void updatePlayerLight(Player player, Location location, int lightLevel) {
+    UUID playerId = player.getUniqueId();
+    Location oldLocation = playerLightLocations.get(playerId);
+
+    if (oldLocation != null) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            oldLocation.getBlock().setType(Material.AIR);
+        });
+    }
+
+    Bukkit.getScheduler().runTask(plugin, () -> {
+        Location lightLoc = findSafeLightLocation(location);
+        if (lightLoc == null) return;
+
+        Block block = lightLoc.getBlock();
+        block.setType(Material.LIGHT);
+
+        if (block.getBlockData() instanceof Levelled lightData) {
+            lightData.setLevel(lightLevel);
+            block.setBlockData(lightData);
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Location lightLoc = location.clone().add(0, 2, 0);
-            Block block = lightLoc.getBlock();
-            if (!isSafeToPlaceLight(block)) return;
-
-            block.setType(Material.LIGHT);
-            if (block.getBlockData() instanceof Levelled lightData) {
-                lightData.setLevel(lightLevel);
-                block.setBlockData(lightData);
-            }
-
-            playerLightLocations.put(playerId, lightLoc);
-        });
+        playerLightLocations.put(playerId, lightLoc);
+    });
     }
 
     private void removePlayerLight(Player player) {
