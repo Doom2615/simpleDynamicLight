@@ -132,32 +132,43 @@ public class PlayerListener implements Listener {
     }
 
     private boolean isSafeToPlaceLight(Block block, Location playerLoc) {
-    Material type = block.getType();
     // Only place in air blocks
-    if (!type.isAir()) return false;
+    if (!block.getType().isAir()) {
+        return false;
+    }
 
-    // Check blocks below in a 3x3 area under the potential light position
+    // Check if this position would block a chest the player is interacting with
+    if (couldBlockChestInteraction(block, playerLoc)) {
+        return false;
+    }
+
+    // Check blocks below in a 3x3 area
     for (int x = -1; x <= 1; x++) {
         for (int z = -1; z <= 1; z++) {
             Block below = block.getRelative(x, -1, z);
             if (isChestLike(below.getType())) {
-                // Special case: if player is standing directly on a chest
-                if (playerLoc.getBlock().getRelative(0, -1, 0).getType() == below.getType()) {
-                    return false;
-                }
-                // Don't place light above any chest-like block
                 return false;
             }
         }
     }
 
-    // Additional check for double-chests
-    Block twoBelow = block.getRelative(0, -2, 0);
-    if (isChestLike(twoBelow.getType())) {
-        return false;
+    return true;
+}
+
+private boolean couldBlockChestInteraction(Block lightBlock, Location playerLoc) {
+    // Check if player is looking at a chest nearby
+    Block targetBlock = playerLoc.getBlock().getRelative(
+        playerLoc.getDirection().getBlockX(),
+        playerLoc.getDirection().getBlockY(),
+        playerLoc.getDirection().getBlockZ()
+    );
+
+    if (isChestLike(targetBlock.getType())) {
+        // Don't place light if it would be between player and chest
+        return lightBlock.getLocation().distanceSquared(targetBlock.getLocation()) < 4;
     }
 
-    return true;
+    return false;
 }
 
 private boolean isChestLike(Material material) {
@@ -168,18 +179,17 @@ private boolean isChestLike(Material material) {
 }
 
 private Location findSafeLightLocation(Location origin) {
-    // Try positions in order of preference
+    // Try positions in order of preference (side positions first)
     Location[] offsets = {
-        origin.clone().add(1, 2, 0),   // Preferred side position
-        origin.clone().add(-1, 2, 0),
-        origin.clone().add(0, 2, 1),
-        origin.clone().add(0, 2, -1),
+        origin.clone().add(1, 2, 0),   // Right side
+        origin.clone().add(-1, 2, 0),  // Left side
+        origin.clone().add(0, 2, 1),   // Front
+        origin.clone().add(0, 2, -1),  // Back
         origin.clone().add(0, 3, 0),   // Higher position
-        origin.clone().add(0, 1, 0),    // Lower position
-        origin.clone().add(1, 1, 0),
-        origin.clone().add(-1, 1, 0),
-        origin.clone().add(0, 1, 1),
-        origin.clone().add(0, 1, -1)
+        origin.clone().add(1, 1, 0),   // Lower right
+        origin.clone().add(-1, 1, 0),  // Lower left
+        origin.clone().add(0, 1, 1),   // Lower front
+        origin.clone().add(0, 1, -1)   // Lower back
     };
 
     for (Location loc : offsets) {
