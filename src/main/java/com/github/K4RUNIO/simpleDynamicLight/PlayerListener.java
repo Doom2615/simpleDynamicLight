@@ -144,16 +144,9 @@ public class PlayerListener implements Listener {
              FURNACE, BLAST_FURNACE, SMOKER -> true;
         default -> false;
     };
-    }
-
-private boolean isBlockingChestLid(Material material) {
-    return switch (material) {
-        case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL, SHULKER_BOX, FURNACE, BLAST_FURNACE, SMOKER -> true;
-        default -> false;
-    };
 }
 
-    private Location findSafeLightLocation(Location origin) {
+private Location findSafeLightLocation(Location origin) {
     // Try placing 2 blocks above (head-level)
     Location[] offsets = {
         origin.clone().add(0, 2, 0), // head
@@ -161,7 +154,8 @@ private boolean isBlockingChestLid(Material material) {
         origin.clone().add(-1, 2, 0),
         origin.clone().add(0, 2, 1),
         origin.clone().add(0, 2, -1),
-        origin.clone().add(0, 3, 0)
+        origin.clone().add(0, 3, 0),
+        origin.clone().add(0, 1, 0)  // Also check one block above player
     };
 
     for (Location loc : offsets) {
@@ -169,7 +163,7 @@ private boolean isBlockingChestLid(Material material) {
         if (isSafeToPlaceLight(block)) return loc;
     }
     return null;
-    }
+}
 
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
     UUID playerId = player.getUniqueId();
