@@ -156,28 +156,95 @@ public class PlayerListener implements Listener {
         return plugin.getConfig().getInt("light-sources." + itemType, 0);
     }
 
+    private boolean isSafeLightLocation(Location location) {
+    Block block = location.getBlock();
+    
+    // Don't place if not air
+    if (!block.getType().isAir()) {
+        return false;
+    }
+
+    // Check adjacent blocks for interactables
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && y == 0 && z == 0) continue; // Skip center block
+                
+                Material adjacentType = block.getRelative(x, y, z).getType();
+                if (isInteractableBlock(adjacentType)) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+private boolean isInteractableBlock(Material material) {
+    return material == Material.CHEST || 
+           material == Material.TRAPPED_CHEST ||
+           material == Material.ENDER_CHEST ||
+           material == Material.BARREL ||
+           material == Material.FURNACE ||
+           material == Material.BLAST_FURNACE ||
+           material == Material.SMOKER ||
+           material == Material.DROPPER ||
+           material == Material.DISPENSER ||
+           material == Material.HOPPER ||
+           material == Material.ANVIL ||
+           material == Material.CHIPPED_ANVIL ||
+           material == Material.DAMAGED_ANVIL ||
+           material == Material.ENCHANTING_TABLE ||
+           material == Material.BREWING_STAND ||
+           material == Material.CRAFTING_TABLE;
+}
+
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
     Location currentLightLocation = playerLightLocations.get(player);
 
+    // Remove previous light
     if (currentLightLocation != null) {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            currentLightLocation.getBlock().setType(Material.AIR);
+            Block block = currentLightLocation.getBlock();
+            if (block.getType() == Material.LIGHT) {
+                block.setType(Material.AIR);
+            }
         });
     }
 
     Bukkit.getScheduler().runTask(plugin, () -> {
-        // Place light block 2 blocks above the player's feet (at head level)
-        Location lightLocation = location.clone().add(0, 2, 0);
-        Block block = lightLocation.getBlock();
-        block.setType(Material.LIGHT);
-
-        Levelled lightData = (Levelled) block.getBlockData();
-        lightData.setLevel(lightLevel);
-        block.setBlockData(lightData);
-
-        playerLightLocations.put(player, lightLocation);
+        // Player-specific light placement logic
+        Location lightLocation = findOptimalPlayerLightLocation(player, location);
+        
+        if (lightLocation != null && isSafeLightLocation(lightLocation)) {
+            Block block = lightLocation.getBlock();
+            block.setType(Material.LIGHT);
+            Levelled lightData = (Levelled) block.getBlockData();
+            lightData.setLevel(lightLevel);
+            block.setBlockData(lightData);
+            playerLightLocations.put(player, lightLocation);
+        } else {
+            playerLightLocations.remove(player);
+        }
     });
+}
+
+private Location findOptimalPlayerLightLocation(Player player, Location location) {
+    // Try eye level first (for better visual effect)
+    Location eyeLevel = location.clone().add(0, 1.6, 0);
+    if (eyeLevel.getBlock().getType().isAir()) {
+        return eyeLevel;
     }
+    
+    // Fallback to torso level
+    Location torsoLevel = location.clone().add(0, 1.2, 0);
+    if (torsoLevel.getBlock().getType().isAir()) {
+        return torsoLevel;
+    }
+    
+    return null;
+}
+
 
     private void removePlayerLight(Player player) {
         Location lightLocation = playerLightLocations.remove(player);
@@ -192,35 +259,70 @@ public class PlayerListener implements Listener {
     Location itemLocation = item.getLocation();
     Location currentLightLocation = itemLightLocations.get(item);
 
+    // Remove previous light
     if (currentLightLocation != null) {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            currentLightLocation.getBlock().setType(Material.AIR);
+            Block block = currentLightLocation.getBlock();
+            if (block.getType() == Material.LIGHT) {
+                block.setType(Material.AIR);
+            }
         });
     }
 
     Bukkit.getScheduler().runTask(plugin, () -> {
-        // Place light block 1 block above the item
-        Location lightLocation = itemLocation.clone().add(0, 1, 0);
-        Block block = lightLocation.getBlock();
-        block.setType(Material.LIGHT);
-
-        Levelled lightData = (Levelled) block.getBlockData();
-        lightData.setLevel(lightLevel);
-        block.setBlockData(lightData);
-
-        itemLightLocations.put(item, lightLocation);
+        // Item-specific light placement logic
+        Location lightLocation = findOptimalItemLightLocation(itemLocation);
+        
+        if (lightLocation != null && isSafeLightLocation(lightLocation)) {
+            Block block = lightLocation.getBlock();
+            block.setType(Material.LIGHT);
+            Levelled lightData = (Levelled) block.getBlockData();
+            lightData.setLevel(lightLevel);
+            block.setBlockData(lightData);
+            itemLightLocations.put(item, lightLocation);
+        } else {
+            itemLightLocations.remove(item);
+        }
     });
+}
+
+private Location findOptimalItemLightLocation(Location itemLocation) {
+    // Small vertical offset for natural appearance
+    Location bestLocation = itemLocation.clone().add(0, 0.3, 0);
+    
+    // Check if item is moving fast (thrown)
+    if (item.getVelocity().lengthSquared() > 0.1) {
+        // For moving items, place light slightly higher to avoid flickering
+        bestLocation.add(0, 0.2, 0);
     }
     
+    return bestLocation;
+}
     
-
     private void removeItemLight(Item item) {
-        Location lightLocation = itemLightLocations.remove(item);
-        if (lightLocation != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                lightLocation.getBlock().setType(Material.AIR);
-            });
-        }
+    Location lightLocation = itemLightLocations.remove(item);
+    if (lightLocation != null) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            // Smooth light fade-out
+            Block block = lightLocation.getBlock();
+            if (block.getType() == Material.LIGHT) {
+                Levelled lightData = (Levelled)block.getBlockData();
+                if (lightData.getLevel() > 5) {
+                    lightData.setLevel(5);
+                    block.setBlockData(lightData);
+                    new BukkitRunnable() {
+                        public void run() {
+                            if (block.getType() == Material.LIGHT) {
+                                block.setType(Material.AIR);
+                            }
+                        }
+                    }.runTaskLater(plugin, 2L);
+                } else {
+                    block.setType(Material.AIR);
+                }
+            }
+        });
+    }
     }
 
     private void startLightUpdateTask() {
