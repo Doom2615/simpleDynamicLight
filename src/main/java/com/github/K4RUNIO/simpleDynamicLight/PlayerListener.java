@@ -28,6 +28,7 @@ import java.util.UUID;
 
 public class PlayerListener implements Listener {
     private final SimpleDynamicLight plugin;
+    private final ChestVisualFix chestVisualFix;
     private final Map<UUID, Location> playerLightLocations = new HashMap<>();
     private final Map<UUID, Location> itemLightLocations = new HashMap<>();
 
