@@ -13,12 +13,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SimpleDynamicLight extends JavaPlugin {
     private final Set<UUID> disabledPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private PlayerListener playerListener;
+    private ChestVisualFix chestVisualFix;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
-        
+
+        this.chestVisualFix = new ChestVisualFix(this);
         this.playerListener = new PlayerListener(this);
         getServer().getPluginManager().registerEvents(playerListener, this);
         
@@ -66,6 +68,9 @@ public class SimpleDynamicLight extends JavaPlugin {
                 break;
         }
         return true;
+    }
+    public ChestVisualFix getChestVisualFix() {
+        return chestVisualFix;
     }
 
     private void sendUsage(CommandSender sender) {
