@@ -1,5 +1,8 @@
 package com.github.K4RUNIO.simpleDynamicLight;
 
+//chest fixes
+import org.bukkit.block.Chest;
+import org.bukkit.inventory.DoubleChestInventory;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
