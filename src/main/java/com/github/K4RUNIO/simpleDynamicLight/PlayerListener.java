@@ -30,15 +30,10 @@ public class PlayerListener implements Listener {
     private final SimpleDynamicLight plugin;
     private final Map<UUID, Location> playerLightLocations = new HashMap<>();
     private final Map<UUID, Location> itemLightLocations = new HashMap<>();
-//Chest fixes
-/*private ChestVisualFix chestVisualFix;
-
-    public void onEnable() {
-        chestVisualFix = new ChestVisualFix(this);
-    }*/
 
     public PlayerListener(SimpleDynamicLight plugin) {
         this.plugin = plugin;
+        this.chestVisualFix = plugin.getChestVisualFix();
         startLightUpdateTask();
     }
 
@@ -58,6 +53,7 @@ public class PlayerListener implements Listener {
         int lightLevel = getMaxLightLevel(player);
         if (lightLevel > 0) {
             updatePlayerLight(player, to, lightLevel);
+            chestVisualFix.handleChestVisuals(to);
         } else {
             removePlayerLight(player);
         }
