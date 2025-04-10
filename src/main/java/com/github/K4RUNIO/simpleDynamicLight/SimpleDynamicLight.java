@@ -16,12 +16,20 @@ public class SimpleDynamicLight extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+         // Initialize the chest visual fix
+        chestVisualFix = new ChestVisualFix(this);
+
+        this.getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
         getServer().getConsoleSender().sendMessage("[SimpleDynamicLight] §aSimpleDynamicLight plugin loaded successfully!");
     }
 
+    public ChestVisualFix getChestVisualFix() {
+        return chestVisualFix;
+    }
+    
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (command.getName().equalsIgnoreCase("dynlight")) {
