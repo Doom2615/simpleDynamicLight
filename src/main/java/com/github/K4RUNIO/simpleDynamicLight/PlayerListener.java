@@ -131,36 +131,62 @@ public class PlayerListener implements Listener {
         return Math.max(getLightLevel(inv.getItemInMainHand()), getLightLevel(inv.getItemInOffHand()));
     }
 
-    private boolean isSafeToPlaceLight(Block block) {
+    private boolean isSafeToPlaceLight(Block block, Location playerLoc) {
     Material type = block.getType();
-    if (type != Material.AIR && type != Material.CAVE_AIR && type != Material.VOID_AIR) return false;
+    // Only place in air blocks
+    if (!type.isAir()) return false;
 
-    Block below = block.getRelative(0, -1, 0);
-    Material belowType = below.getType();
+    // Check blocks below in a 3x3 area under the potential light position
+    for (int x = -1; x <= 1; x++) {
+        for (int z = -1; z <= 1; z++) {
+            Block below = block.getRelative(x, -1, z);
+            if (isChestLike(below.getType())) {
+                // Special case: if player is standing directly on a chest
+                if (playerLoc.getBlock().getRelative(0, -1, 0).getType() == below.getType()) {
+                    return false;
+                }
+                // Don't place light above any chest-like block
+                return false;
+            }
+        }
+    }
 
-    // Avoid placing above interactable blocks
-    return !switch (belowType) {
-        case CHEST, ENDER_CHEST, TRAPPED_CHEST, BARREL, SHULKER_BOX,
-             FURNACE, BLAST_FURNACE, SMOKER -> true;
+    // Additional check for double-chests
+    Block twoBelow = block.getRelative(0, -2, 0);
+    if (isChestLike(twoBelow.getType())) {
+        return false;
+    }
+
+    return true;
+}
+
+private boolean isChestLike(Material material) {
+    return switch (material) {
+        case CHEST, TRAPPED_CHEST, ENDER_CHEST, BARREL, SHULKER_BOX -> true;
         default -> false;
     };
 }
 
 private Location findSafeLightLocation(Location origin) {
-    // Try placing 2 blocks above (head-level)
+    // Try positions in order of preference
     Location[] offsets = {
-        origin.clone().add(0, 2, 0), // head
-        origin.clone().add(1, 2, 0),
+        origin.clone().add(1, 2, 0),   // Preferred side position
         origin.clone().add(-1, 2, 0),
         origin.clone().add(0, 2, 1),
         origin.clone().add(0, 2, -1),
-        origin.clone().add(0, 3, 0),
-        origin.clone().add(0, 1, 0)  // Also check one block above player
+        origin.clone().add(0, 3, 0),   // Higher position
+        origin.clone().add(0, 1, 0),    // Lower position
+        origin.clone().add(1, 1, 0),
+        origin.clone().add(-1, 1, 0),
+        origin.clone().add(0, 1, 1),
+        origin.clone().add(0, 1, -1)
     };
 
     for (Location loc : offsets) {
         Block block = loc.getBlock();
-        if (isSafeToPlaceLight(block)) return loc;
+        if (isSafeToPlaceLight(block, origin)) {
+            return loc;
+        }
     }
     return null;
 }
