@@ -157,24 +157,26 @@ public class PlayerListener implements Listener {
     }
 
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
-        Location currentLightLocation = playerLightLocations.get(player);
+    Location currentLightLocation = playerLightLocations.get(player);
 
-        if (currentLightLocation != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                currentLightLocation.getBlock().setType(Material.AIR);
-            });
-        }
-
+    if (currentLightLocation != null) {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Block block = location.getBlock();
-            block.setType(Material.LIGHT);
-
-            Levelled lightData = (Levelled) block.getBlockData();
-            lightData.setLevel(lightLevel);
-            block.setBlockData(lightData);
-
-            playerLightLocations.put(player, location);
+            currentLightLocation.getBlock().setType(Material.AIR);
         });
+    }
+
+    Bukkit.getScheduler().runTask(plugin, () -> {
+        // Place light block 2 blocks above the player's feet (at head level)
+        Location lightLocation = location.clone().add(0, 2, 0);
+        Block block = lightLocation.getBlock();
+        block.setType(Material.LIGHT);
+
+        Levelled lightData = (Levelled) block.getBlockData();
+        lightData.setLevel(lightLevel);
+        block.setBlockData(lightData);
+
+        playerLightLocations.put(player, lightLocation);
+    });
     }
 
     private void removePlayerLight(Player player) {
@@ -187,26 +189,30 @@ public class PlayerListener implements Listener {
     }
 
     private void updateItemLight(Item item, int lightLevel) {
-        Location itemLocation = item.getLocation();
-        Location currentLightLocation = itemLightLocations.get(item);
+    Location itemLocation = item.getLocation();
+    Location currentLightLocation = itemLightLocations.get(item);
 
-        if (currentLightLocation != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                currentLightLocation.getBlock().setType(Material.AIR);
-            });
-        }
-
+    if (currentLightLocation != null) {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Block block = itemLocation.getBlock();
-            block.setType(Material.LIGHT);
-
-            Levelled lightData = (Levelled) block.getBlockData();
-            lightData.setLevel(lightLevel);
-            block.setBlockData(lightData);
-
-            itemLightLocations.put(item, itemLocation);
+            currentLightLocation.getBlock().setType(Material.AIR);
         });
     }
+
+    Bukkit.getScheduler().runTask(plugin, () -> {
+        // Place light block 1 block above the item
+        Location lightLocation = itemLocation.clone().add(0, 1, 0);
+        Block block = lightLocation.getBlock();
+        block.setType(Material.LIGHT);
+
+        Levelled lightData = (Levelled) block.getBlockData();
+        lightData.setLevel(lightLevel);
+        block.setBlockData(lightData);
+
+        itemLightLocations.put(item, lightLocation);
+    });
+    }
+    
+    
 
     private void removeItemLight(Item item) {
         Location lightLocation = itemLightLocations.remove(item);
