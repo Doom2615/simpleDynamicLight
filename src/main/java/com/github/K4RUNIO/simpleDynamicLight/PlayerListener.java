@@ -258,4 +258,4 @@ private Location findSafeLightLocation(Location origin) {
             }
         }, 0L, 5L);
     }
-                }
+}
