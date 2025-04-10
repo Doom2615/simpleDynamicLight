@@ -1,11 +1,20 @@
-# Items that will emit light (you can add your own)
-# Numbers are indicators of light strength (1-15)
+# Light levels for various items
 light-sources:
-  TORCH: 15
-  LANTERN: 15
-  GLOWSTONE: 15
-  SOUL_TORCH: 10
+  TORCH: 14
+  LANTERN: 12
   SOUL_LANTERN: 10
+  GLOWSTONE: 15
+  SEA_LANTERN: 15
+  SHROOMLIGHT: 15
+  END_ROD: 14
+  REDSTONE_TORCH: 7
+  SOUL_TORCH: 10
 
-# Update interval in milliseconds (500ms by default)
-update-interval: 500
+# Update settings
+update-interval-ticks: 10  # How often to check for updates (10 ticks = 0.5 seconds)
+
+# Chest visual fix settings (DO NOT TOUCH if you dont KNOW what you're doing)
+chest:
+  check-radius: 3       # How many blocks to check for nearby chests
+  update-distance: 32   # How far to send visual updates to players
+  update-delay: 2       # Ticks to wait before updating (2 ticks = 0.1 seconds)
