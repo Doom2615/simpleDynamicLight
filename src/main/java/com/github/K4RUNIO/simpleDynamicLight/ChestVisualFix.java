@@ -31,12 +31,13 @@ public class ChestVisualFix implements Listener {
     }
     
     private void updateNearbyPlayers(Location location) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getWorld().equals(location.getWorld()) && 
-                player.getLocation().distance(location) < 32) {
-                player.updateInventory();
-            }
+    double maxDistanceSquared = 32 * 32; // 32 blocks squared
+    for (Player player : Bukkit.getOnlinePlayers()) {
+        if (player.getWorld().equals(location.getWorld()) && 
+            player.getLocation().distanceSquared(location) < maxDistanceSquared) {
+            player.updateInventory();
         }
+    }
     }
     
     private void updateChestBlocks(Location location) {
