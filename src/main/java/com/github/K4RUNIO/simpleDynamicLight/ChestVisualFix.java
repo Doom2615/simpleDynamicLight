@@ -1,4 +1,4 @@
-package com.github.K4RUNIO.simpleDynamicLight;
+//package com.github.K4RUNIO.simpleDynamicLight;
 //Chest fixes
 public class ChestVisualFix {
     private final SimpleDynamicLight plugin;
