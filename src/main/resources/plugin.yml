@@ -1,8 +1,8 @@
 name: SimpleDynamicLight
-version: '1.0'
+version: '2.1'
 main: com.github.K4RUNIO.simpleDynamicLight.SimpleDynamicLight
 api-version: '1.21'
-authors: [ Karunio ]
+authors: [ Karunio, Doom2615 ]
 description: Simple plugin that will add Dynamic Light to your server
 commands:
   dynlight:
