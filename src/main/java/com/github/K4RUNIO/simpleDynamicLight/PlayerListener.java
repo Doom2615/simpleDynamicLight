@@ -25,10 +25,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+
+
 public class PlayerListener implements Listener {
     private final SimpleDynamicLight plugin;
-    private final Map<Player, Location> playerLightLocations = new HashMap<>();
-    private final Map<Item, Location> itemLightLocations = new HashMap<>();
+    private final Map<UUID, Location> playerLightLocations = new HashMap<>();
+    private final Map<UUID, Location> itemLightLocations = new HashMap<>();
 
     public PlayerListener(SimpleDynamicLight plugin) {
         this.plugin = plugin;
@@ -41,21 +43,14 @@ public class PlayerListener implements Listener {
         Location to = event.getTo();
         Location from = event.getFrom();
 
-        if (to == null || (to.getBlockX() == from.getBlockX() && to.getBlockY() == from.getBlockY() && to.getBlockZ() == from.getBlockZ())) {
-            return;
-        }
+        if (to == null || from == null || to.getBlock().equals(from.getBlock())) return;
 
         if (!plugin.isDynamicLightEnabled(player)) {
             removePlayerLight(player);
             return;
         }
 
-        PlayerInventory inventory = player.getInventory();
-        ItemStack mainHandItem = inventory.getItemInMainHand();
-        ItemStack offHandItem = inventory.getItemInOffHand();
-
-        int lightLevel = Math.max(getLightLevel(mainHandItem), getLightLevel(offHandItem));
-
+        int lightLevel = getMaxLightLevel(player);
         if (lightLevel > 0) {
             updatePlayerLight(player, to, lightLevel);
         } else {
@@ -66,18 +61,12 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerItemHeld(PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
-
         if (!plugin.isDynamicLightEnabled(player)) {
             removePlayerLight(player);
             return;
         }
 
-        PlayerInventory inventory = player.getInventory();
-        ItemStack mainHandItem = inventory.getItemInMainHand();
-        ItemStack offHandItem = inventory.getItemInOffHand();
-
-        int lightLevel = Math.max(getLightLevel(mainHandItem), getLightLevel(offHandItem));
-
+        int lightLevel = getMaxLightLevel(player);
         if (lightLevel > 0) {
             updatePlayerLight(player, player.getLocation(), lightLevel);
         } else {
@@ -93,14 +82,10 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onPlayerDropItem(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
-
-        if (!plugin.isDynamicLightEnabled(player)) {
-            return;
-        }
+        if (!plugin.isDynamicLightEnabled(player)) return;
 
         Item droppedItem = event.getItemDrop();
-        ItemStack itemStack = droppedItem.getItemStack();
-        int lightLevel = getLightLevel(itemStack);
+        int lightLevel = getLightLevel(droppedItem.getItemStack());
 
         if (lightLevel > 0) {
             removePlayerLight(player);
@@ -111,30 +96,19 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onItemSpawn(ItemSpawnEvent event) {
         Item item = event.getEntity();
-        ItemStack itemStack = item.getItemStack();
-        int lightLevel = getLightLevel(itemStack);
-
-        if (lightLevel > 0) {
-            updateItemLight(item, lightLevel);
-        }
+        int lightLevel = getLightLevel(item.getItemStack());
+        if (lightLevel > 0) updateItemLight(item, lightLevel);
     }
 
     @EventHandler
     public void onEntityPickupItem(EntityPickupItemEvent event) {
         Item item = event.getItem();
-        if (itemLightLocations.containsKey(item)) {
+        UUID itemId = item.getUniqueId();
+        if (itemLightLocations.containsKey(itemId)) {
             removeItemLight(item);
 
-            if (event.getEntity() instanceof Player) {
-                Player player = (Player) event.getEntity();
-
-                if (!plugin.isDynamicLightEnabled(player)) {
-                    return;
-                }
-
-                ItemStack itemStack = item.getItemStack();
-                int lightLevel = getLightLevel(itemStack);
-
+            if (event.getEntity() instanceof Player player && plugin.isDynamicLightEnabled(player)) {
+                int lightLevel = getLightLevel(item.getItemStack());
                 if (lightLevel > 0) {
                     updatePlayerLight(player, player.getLocation(), lightLevel);
                 }
@@ -144,216 +118,109 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onItemDespawn(ItemDespawnEvent event) {
-        Item item = event.getEntity();
-        if (itemLightLocations.containsKey(item)) {
-            removeItemLight(item);
-        }
+        removeItemLight(event.getEntity());
     }
 
     private int getLightLevel(ItemStack item) {
         if (item == null) return 0;
-        String itemType = item.getType().toString();
-        return plugin.getConfig().getInt("light-sources." + itemType, 0);
+        return plugin.getConfig().getInt("light-sources." + item.getType(), 0);
     }
 
-    private boolean isSafeLightLocation(Location location) {
-    Block block = location.getBlock();
-    
-    // Don't place if not air
-    if (!block.getType().isAir()) {
-        return false;
+    private int getMaxLightLevel(Player player) {
+        PlayerInventory inv = player.getInventory();
+        return Math.max(getLightLevel(inv.getItemInMainHand()), getLightLevel(inv.getItemInOffHand()));
     }
-
-    // Check adjacent blocks for interactables
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int z = -1; z <= 1; z++) {
-                if (x == 0 && y == 0 && z == 0) continue; // Skip center block
-                
-                Material adjacentType = block.getRelative(x, y, z).getType();
-                if (isInteractableBlock(adjacentType)) {
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
-}
-
-private boolean isInteractableBlock(Material material) {
-    return material == Material.CHEST || 
-           material == Material.TRAPPED_CHEST ||
-           material == Material.ENDER_CHEST ||
-           material == Material.BARREL ||
-           material == Material.FURNACE ||
-           material == Material.BLAST_FURNACE ||
-           material == Material.SMOKER ||
-           material == Material.DROPPER ||
-           material == Material.DISPENSER ||
-           material == Material.HOPPER ||
-           material == Material.ANVIL ||
-           material == Material.CHIPPED_ANVIL ||
-           material == Material.DAMAGED_ANVIL ||
-           material == Material.ENCHANTING_TABLE ||
-           material == Material.BREWING_STAND ||
-           material == Material.CRAFTING_TABLE;
-}
 
     private void updatePlayerLight(Player player, Location location, int lightLevel) {
-    Location currentLightLocation = playerLightLocations.get(player);
+        UUID playerId = player.getUniqueId();
+        Location oldLocation = playerLightLocations.get(playerId);
 
-    // Remove previous light
-    if (currentLightLocation != null) {
+        if (oldLocation != null) {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                oldLocation.getBlock().setType(Material.AIR);
+            });
+        }
+
         Bukkit.getScheduler().runTask(plugin, () -> {
-            Block block = currentLightLocation.getBlock();
-            if (block.getType() == Material.LIGHT) {
-                block.setType(Material.AIR);
+            Location lightLoc = location.clone().add(0, 2, 0);
+            Block block = lightLoc.getBlock();
+            if (block.getType() != Material.AIR && block.getType() != Material.CAVE_AIR) return;
+
+            block.setType(Material.LIGHT);
+            if (block.getBlockData() instanceof Levelled lightData) {
+                lightData.setLevel(lightLevel);
+                block.setBlockData(lightData);
             }
+
+            playerLightLocations.put(playerId, lightLoc);
         });
     }
 
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        // Player-specific light placement logic
-        Location lightLocation = findOptimalPlayerLightLocation(player, location);
-        
-        if (lightLocation != null && isSafeLightLocation(lightLocation)) {
-            Block block = lightLocation.getBlock();
-            block.setType(Material.LIGHT);
-            Levelled lightData = (Levelled) block.getBlockData();
-            lightData.setLevel(lightLevel);
-            block.setBlockData(lightData);
-            playerLightLocations.put(player, lightLocation);
-        } else {
-            playerLightLocations.remove(player);
-        }
-    });
-}
-
-private Location findOptimalPlayerLightLocation(Player player, Location location) {
-    // Try eye level first (for better visual effect)
-    Location eyeLevel = location.clone().add(0, 1.6, 0);
-    if (eyeLevel.getBlock().getType().isAir()) {
-        return eyeLevel;
-    }
-    
-    // Fallback to torso level
-    Location torsoLevel = location.clone().add(0, 1.2, 0);
-    if (torsoLevel.getBlock().getType().isAir()) {
-        return torsoLevel;
-    }
-    
-    return null;
-}
-
-
     private void removePlayerLight(Player player) {
-        Location lightLocation = playerLightLocations.remove(player);
-        if (lightLocation != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                lightLocation.getBlock().setType(Material.AIR);
-            });
+        UUID id = player.getUniqueId();
+        Location loc = playerLightLocations.remove(id);
+        if (loc != null) {
+            Bukkit.getScheduler().runTask(plugin, () -> loc.getBlock().setType(Material.AIR));
         }
     }
 
     private void updateItemLight(Item item, int lightLevel) {
-    Location itemLocation = item.getLocation();
-    Location currentLightLocation = itemLightLocations.get(item);
+        UUID itemId = item.getUniqueId();
+        Location oldLoc = itemLightLocations.get(itemId);
 
-    // Remove previous light
-    if (currentLightLocation != null) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            Block block = currentLightLocation.getBlock();
-            if (block.getType() == Material.LIGHT) {
-                block.setType(Material.AIR);
-            }
-        });
-    }
-
-    Bukkit.getScheduler().runTask(plugin, () -> {
-        // Item-specific light placement logic
-        Location lightLocation = findOptimalItemLightLocation(itemLocation);
-        
-        if (lightLocation != null && isSafeLightLocation(lightLocation)) {
-            Block block = lightLocation.getBlock();
-            block.setType(Material.LIGHT);
-            Levelled lightData = (Levelled) block.getBlockData();
-            lightData.setLevel(lightLevel);
-            block.setBlockData(lightData);
-            itemLightLocations.put(item, lightLocation);
-        } else {
-            itemLightLocations.remove(item);
+        if (oldLoc != null) {
+            Bukkit.getScheduler().runTask(plugin, () -> oldLoc.getBlock().setType(Material.AIR));
         }
-    });
-}
 
-private Location findOptimalItemLightLocation(Location itemLocation) {
-    // Small vertical offset for natural appearance
-    Location bestLocation = itemLocation.clone().add(0, 0.3, 0);
-    
-    // Check if item is moving fast (thrown)
-    if (item.getVelocity().lengthSquared() > 0.1) {
-        // For moving items, place light slightly higher to avoid flickering
-        bestLocation.add(0, 0.2, 0);
-    }
-    
-    return bestLocation;
-}
-    
-    private void removeItemLight(Item item) {
-    Location lightLocation = itemLightLocations.remove(item);
-    if (lightLocation != null) {
         Bukkit.getScheduler().runTask(plugin, () -> {
-            // Smooth light fade-out
-            Block block = lightLocation.getBlock();
-            if (block.getType() == Material.LIGHT) {
-                Levelled lightData = (Levelled)block.getBlockData();
-                if (lightData.getLevel() > 5) {
-                    lightData.setLevel(5);
-                    block.setBlockData(lightData);
-                    new BukkitRunnable() {
-                        public void run() {
-                            if (block.getType() == Material.LIGHT) {
-                                block.setType(Material.AIR);
-                            }
-                        }
-                    }.runTaskLater(plugin, 2L);
-                } else {
-                    block.setType(Material.AIR);
-                }
+            Location lightLoc = item.getLocation().clone().add(0, 1, 0);
+            Block block = lightLoc.getBlock();
+            if (block.getType() != Material.AIR && block.getType() != Material.CAVE_AIR) return;
+
+            block.setType(Material.LIGHT);
+            if (block.getBlockData() instanceof Levelled lightData) {
+                lightData.setLevel(lightLevel);
+                block.setBlockData(lightData);
             }
+
+            itemLightLocations.put(itemId, lightLoc);
         });
     }
+
+    private void removeItemLight(Item item) {
+        UUID itemId = item.getUniqueId();
+        Location loc = itemLightLocations.remove(itemId);
+        if (loc != null) {
+            Bukkit.getScheduler().runTask(plugin, () -> loc.getBlock().setType(Material.AIR));
+        }
     }
 
     private void startLightUpdateTask() {
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
-            for (Map.Entry<Player, Location> entry : playerLightLocations.entrySet()) {
-                Player player = entry.getKey();
-                Location currentLightLocation = entry.getValue();
-                Location playerLocation = player.getLocation();
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            Map<UUID, Location> playerLights = new HashMap<>(playerLightLocations);
+            for (UUID uuid : playerLights.keySet()) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player == null || !plugin.isDynamicLightEnabled(player)) continue;
 
-                if (!playerLocation.equals(currentLightLocation)) {
-                    PlayerInventory inventory = player.getInventory();
-                    ItemStack mainHandItem = inventory.getItemInMainHand();
-                    ItemStack offHandItem = inventory.getItemInOffHand();
-
-                    int lightLevel = Math.max(getLightLevel(mainHandItem), getLightLevel(offHandItem));
-
-                    if (lightLevel > 0 && plugin.isDynamicLightEnabled(player)) {
-                        updatePlayerLight(player, playerLocation, lightLevel);
-                    }
+                Location current = player.getLocation();
+                Location prev = playerLights.get(uuid);
+                if (!current.equals(prev)) {
+                    int lightLevel = getMaxLightLevel(player);
+                    if (lightLevel > 0) updatePlayerLight(player, current, lightLevel);
                 }
             }
 
-            for (Map.Entry<Item, Location> entry : itemLightLocations.entrySet()) {
-                Item item = entry.getKey();
-                Location currentLightLocation = entry.getValue();
-                Location itemLocation = item.getLocation();
-
-                if (!itemLocation.equals(currentLightLocation)) {
-                    updateItemLight(item, getLightLevel(item.getItemStack()));
+            Map<UUID, Location> itemLights = new HashMap<>(itemLightLocations);
+            for (UUID uuid : itemLights.keySet()) {
+                Entity entity = Bukkit.getEntity(uuid);
+                if (entity instanceof Item item) {
+                    Location current = item.getLocation();
+                    Location prev = itemLights.get(uuid);
+                    if (!current.equals(prev)) {
+                        updateItemLight(item, getLightLevel(item.getItemStack()));
+                    }
                 }
             }
         }, 0L, 5L);
     }
-}
+                }
