@@ -1,4 +1,4 @@
-com.github.K4RUNIO.simpleDynamicLight;
+package com.github.K4RUNIO.simpleDynamicLight;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -8,6 +8,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SimpleDynamicLight extends JavaPlugin {
@@ -19,7 +20,7 @@ public class SimpleDynamicLight extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
-
+        
         this.chestVisualFix = new ChestVisualFix(this);
         this.playerListener = new PlayerListener(this);
         getServer().getPluginManager().registerEvents(playerListener, this);
@@ -36,7 +37,9 @@ public class SimpleDynamicLight extends JavaPlugin {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!command.getName().equalsIgnoreCase("dynlight")) return false;
+        if (!command.getName().equalsIgnoreCase("dynlight")) {
+            return false;
+        }
         
         if (args.length == 0) {
             sendUsage(sender);
@@ -69,9 +72,6 @@ public class SimpleDynamicLight extends JavaPlugin {
         }
         return true;
     }
-    public ChestVisualFix getChestVisualFix() {
-        return chestVisualFix;
-    }
 
     private void sendUsage(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "=== Dynamic Light Commands ===");
@@ -95,5 +95,9 @@ public class SimpleDynamicLight extends JavaPlugin {
 
     public boolean isDynamicLightEnabled(Player player) {
         return !disabledPlayers.contains(player.getUniqueId());
+    }
+
+    public ChestVisualFix getChestVisualFix() {
+        return chestVisualFix;
     }
 }
