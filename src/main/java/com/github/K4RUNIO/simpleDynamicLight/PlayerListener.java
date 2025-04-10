@@ -312,8 +312,9 @@ private Location findSafeLightLocation(Location origin) {
         // Force chest rendering update
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             for (Player online : Bukkit.getOnlinePlayers()) {
+                double d = 32 * 32; // 32 blocks squared
                 if (online.getWorld().equals(location.getWorld()) && 
-                    online.getLocation().distance(location) < 32) {
+                    online.getLocation().squaredDistance(location) < d) {
                     online.updateInventory();
                 }
             }
