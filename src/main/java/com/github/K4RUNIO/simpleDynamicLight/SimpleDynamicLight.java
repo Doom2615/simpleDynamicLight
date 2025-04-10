@@ -11,6 +11,7 @@ import java.util.UUID;
 
 public class SimpleDynamicLight extends JavaPlugin {
     private final Set<UUID> disabledPlayers = new HashSet<>();
+    private ChestVisualFix chestVisualFix;
 
     @Override
     public void onEnable() {
