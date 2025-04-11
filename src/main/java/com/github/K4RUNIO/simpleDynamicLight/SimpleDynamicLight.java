@@ -20,6 +20,7 @@ public class SimpleDynamicLight extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         reloadConfig();
+        getConfig().addDefault("threading.chest-check-threads", 2);
         
         this.chestVisualFix = new ChestVisualFix(this);
         this.playerListener = new PlayerListener(this);
@@ -29,11 +30,14 @@ public class SimpleDynamicLight extends JavaPlugin {
     }
 
     @Override
-    public void onDisable() {
-        if (playerListener != null) {
-            playerListener.disable();
-        }
+public void onDisable() {
+    if (playerListener != null) {
+        playerListener.disable();
     }
+    if (chestVisualFix != null) {
+        chestVisualFix.shutdown();
+    }
+}
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
