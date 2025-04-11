@@ -18,3 +18,6 @@ chest:
   check-radius: 3       # How many blocks to check for nearby chests
   update-distance: 32   # How far to send visual updates to players
   update-delay: 2       # Ticks to wait before updating (2 ticks = 0.1 seconds)
+
+  threading:
+  chest-check-threads: 2 #Up to 4 Threads (1 - 2 Recommended)
